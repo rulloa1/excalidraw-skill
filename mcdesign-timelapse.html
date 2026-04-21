@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MCDesign · The Build Unfolds</title>
+  <meta name="description" content="MCDesign — Watch a Houston construction project come to life, frame by frame. Premium construction management and design-build services." />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            serif:  ['Cormorant Garamond', 'Georgia', 'serif'],
+            sans:   ['Montserrat', 'sans-serif'],
+          },
+          colors: {
+            charcoal:  '#1C1C1E',
+            offwhite:  '#F4F1EC',
+            gold:      '#B8960C',
+            'gold-lt': '#D4AF37',
+            stone:     '#3A3A3C',
+            mist:      '#8A8A8E',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- GSAP + ScrollTrigger CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+  <style>
+    /* ─── Base ───────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: auto; }
+    body {
+      background-color: #1C1C1E;
+      color: #F4F1EC;
+      font-family: 'Montserrat', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* ─── Fixed Canvas ───────────────────────────────────────── */
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+
+    /* ─── Scrim: editorial dark vignette ─────────────────────── */
+    #canvas-scrim {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      /* cinematic letterbox-style darkening at top and bottom */
+      background:
+        linear-gradient(to bottom,
+          rgba(28, 28, 30, 0.80) 0%,
+          rgba(28, 28, 30, 0.10) 18%,
+          rgba(28, 28, 30, 0.00) 40%,
+          rgba(28, 28, 30, 0.00) 60%,
+          rgba(28, 28, 30, 0.20) 82%,
+          rgba(28, 28, 30, 0.75) 100%);
+      pointer-events: none;
+    }
+
+    /* ─── Sticky pinned section ──────────────────────────────── */
+    #canvas-sticky {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      width: 100%;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ─── Overlay Panels (editorial style) ───────────────────── */
+    .overlay-panel {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* glassmorphism card */
+    .glass-card {
+      background: rgba(28, 28, 30, 0.45);
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
+      border: 1px solid rgba(184, 150, 12, 0.20);
+      border-radius: 2px; /* editorial: nearly square corners */
+      padding: 2.2rem 2.8rem;
+      box-shadow:
+        0 0 0 1px rgba(212,175,55,0.06),
+        0 8px 40px rgba(0,0,0,0.55),
+        inset 0 1px 0 rgba(244,241,236,0.04);
+      max-width: min(580px, 88vw);
+    }
+
+    /* Section positions */
+    #overlay-1 { top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+    #overlay-2 { bottom: 11%; left: 5%;  text-align: left; }
+    #overlay-3 { top: 12%;  right: 5%;  text-align: right; }
+    #overlay-4 { bottom: 11%; right: 5%; text-align: right; }
+    #overlay-5 { top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+
+    /* ─── Typography ─────────────────────────────────────────── */
+    .eyebrow {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: #B8960C;
+      margin-bottom: 0.6rem;
+    }
+    .display-xl {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(3rem, 8vw, 6.5rem);
+      font-weight: 300;
+      line-height: 0.9;
+      letter-spacing: -0.01em;
+      color: #F4F1EC;
+    }
+    .display-md {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2rem, 5vw, 3.8rem);
+      font-weight: 300;
+      line-height: 1.05;
+      color: #F4F1EC;
+    }
+    .display-sm {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(1.5rem, 3.5vw, 2.6rem);
+      font-weight: 300;
+      line-height: 1.1;
+      color: #F4F1EC;
+      font-style: italic;
+    }
+    .body-copy {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 300;
+      letter-spacing: 0.06em;
+      line-height: 1.7;
+      color: rgba(244,241,236,0.55);
+      margin-top: 0.75rem;
+    }
+    .gold-rule {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #B8960C, transparent);
+      margin: 1rem auto;
+      width: 4rem;
+    }
+    .gold-rule.left   { background: linear-gradient(90deg, #B8960C, transparent); margin: 1rem 0; }
+    .gold-rule.right  { background: linear-gradient(270deg, #B8960C, transparent); margin: 1rem 0 1rem auto; }
+
+    /* ─── Phase Badge (top-left progress indicator) ──────────── */
+    #phase-badge {
+      position: fixed;
+      top: 5.5rem;
+      left: 2rem;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      opacity: 0;
+      pointer-events: none;
+    }
+    #phase-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #B8960C;
+      box-shadow: 0 0 8px rgba(184,150,12,0.8);
+      animation: pulseDot 2s ease-in-out infinite;
+    }
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.7); }
+    }
+    #phase-label {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.6rem;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: rgba(244,241,236,0.6);
+    }
+
+    /* ─── Frame counter (bottom-right) ──────────────────────── */
+    #frame-counter {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      z-index: 50;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.55rem;
+      font-weight: 600;
+      letter-spacing: 0.25em;
+      color: rgba(244,241,236,0.25);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* ─── CTA Button ─────────────────────────────────────────── */
+    .cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1.5rem;
+      padding: 0.85rem 2.2rem;
+      background: transparent;
+      border: 1px solid rgba(184,150,12,0.6);
+      color: #D4AF37;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      text-decoration: none;
+      cursor: pointer;
+      pointer-events: all;
+      transition: background 0.3s, color 0.3s, box-shadow 0.3s, transform 0.2s;
+    }
+    .cta-btn:hover {
+      background: rgba(184,150,12,0.12);
+      box-shadow: 0 0 30px rgba(184,150,12,0.25);
+      transform: translateY(-1px);
+    }
+    .cta-btn svg { width: 0.9rem; height: 0.9rem; }
+
+    /* ─── Progress Bar ───────────────────────────────────────── */
+    #progress-bar {
+      position: fixed;
+      bottom: 0; left: 0;
+      height: 2px;
+      width: 0%;
+      background: linear-gradient(90deg, #B8960C, #D4AF37);
+      z-index: 1000;
+      box-shadow: 0 0 8px rgba(184,150,12,0.5);
+    }
+
+    /* ─── Nav ────────────────────────────────────────────────── */
+    #site-nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 999;
+      padding: 1.6rem 2.4rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(to bottom, rgba(28,28,30,0.9) 0%, transparent 100%);
+      pointer-events: none;
+    }
+    #nav-logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.2rem;
+      font-weight: 400;
+      letter-spacing: 0.25em;
+      color: #F4F1EC;
+    }
+    #nav-logo span {
+      color: #B8960C;
+    }
+    #nav-tag {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.55rem;
+      font-weight: 600;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: rgba(244,241,236,0.35);
+    }
+
+    /* ─── Grain texture ──────────────────────────────────────── */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 99;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.025;
+    }
+
+    /* ─── Below-fold ─────────────────────────────────────────── */
+    .below-fold {
+      position: relative;
+      z-index: 5;
+      background: #1C1C1E;
+    }
+
+    /* ─── Stats strip ────────────────────────────────────────── */
+    .stat-item {
+      text-align: center;
+      padding: 2rem;
+      border-right: 1px solid rgba(244,241,236,0.08);
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-num {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      font-weight: 300;
+      color: #D4AF37;
+      line-height: 1;
+    }
+    .stat-label {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.6rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: rgba(244,241,236,0.4);
+      margin-top: 0.4rem;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: #1C1C1E; }
+    ::-webkit-scrollbar-thumb { background: #B8960C; border-radius: 2px; }
+  </style>
+</head>
+
+<body>
+
+  <!-- Progress Bar (bottom) -->
+  <div id="progress-bar"></div>
+
+  <!-- Navigation -->
+  <nav id="site-nav" aria-label="MCDesign navigation">
+    <div id="nav-logo">MC<span>Design</span></div>
+    <div id="nav-tag">Construction &amp; Design-Build</div>
+  </nav>
+
+  <!-- Phase Badge -->
+  <div id="phase-badge" aria-live="polite">
+    <div id="phase-dot"></div>
+    <div id="phase-label">Site Preparation</div>
+  </div>
+
+  <!-- Frame Counter -->
+  <div id="frame-counter" aria-hidden="true">
+    <span id="frame-now">001</span> / <span id="frame-total">200</span>
+  </div>
+
+  <!-- Background Canvas -->
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+  <!-- Scrim -->
+  <div id="canvas-scrim" aria-hidden="true"></div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!--  CANVAS SECTION  (600vh)                                   -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="canvas-section" style="height:600vh;" aria-label="Construction timelapse sequence">
+    <div id="canvas-sticky">
+
+      <!-- ── Overlay 1 · Hero ──────────────────────────────────── -->
+      <div id="overlay-1" class="overlay-panel">
+        <div class="glass-card" style="min-width:min(500px,90vw);">
+          <p class="eyebrow">MCDesign · Houston, TX</p>
+          <h1 class="display-xl">The<br/>Build<br/>Unfolds.</h1>
+          <div class="gold-rule"></div>
+          <p class="body-copy">Every structure begins as bare earth.<br/>Watch a vision become concrete reality.</p>
+        </div>
+      </div>
+
+      <!-- ── Overlay 2 · Site Prep ─────────────────────────────── -->
+      <div id="overlay-2" class="overlay-panel">
+        <div class="glass-card">
+          <p class="eyebrow">Phase 01 · Foundation</p>
+          <div class="gold-rule left"></div>
+          <h2 class="display-md">Ground<br/>Breaking.</h2>
+          <p class="body-copy">From graded earth to engineered foundation —<br/>precision at every pour.</p>
+        </div>
+      </div>
+
+      <!-- ── Overlay 3 · Structural ────────────────────────────── -->
+      <div id="overlay-3" class="overlay-panel">
+        <div class="glass-card">
+          <p class="eyebrow" style="text-align:right;">Phase 02 · Structure</p>
+          <div class="gold-rule right"></div>
+          <h2 class="display-md" style="text-align:right;">Steel<br/>Rises.</h2>
+          <p class="body-copy" style="text-align:right;">Frame by frame. Floor by floor.<br/>The skeleton takes shape.</p>
+        </div>
+      </div>
+
+      <!-- ── Overlay 4 · Envelope ──────────────────────────────── -->
+      <div id="overlay-4" class="overlay-panel">
+        <div class="glass-card">
+          <p class="eyebrow" style="text-align:right;">Phase 03 · Envelope</p>
+          <div class="gold-rule right"></div>
+          <h2 class="display-sm" style="text-align:right;">"Craft is what separates<br/>a building from<br/>a landmark."</h2>
+          <p class="body-copy" style="text-align:right;">Exterior skin. Windows. Cladding.<br/>Detail that defines the skyline.</p>
+        </div>
+      </div>
+
+      <!-- ── Overlay 5 · CTA ───────────────────────────────────── -->
+      <div id="overlay-5" class="overlay-panel">
+        <div class="glass-card" style="min-width:min(500px,90vw);">
+          <p class="eyebrow">Your Project. Your Vision.</p>
+          <div class="gold-rule"></div>
+          <h2 class="display-md" style="font-size:clamp(2rem,4.5vw,3.5rem);">Let's Build Something Worth Watching.</h2>
+          <a
+            id="cta-contact"
+            href="mailto:info@mcdesignhouston.com"
+            class="cta-btn"
+            aria-label="Contact MCDesign"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+            </svg>
+            Start a Conversation
+          </a>
+        </div>
+      </div>
+
+    </div><!-- /canvas-sticky -->
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!--  BELOW-FOLD STATS STRIP                                    -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section class="below-fold border-t border-offwhite/5" aria-label="MCDesign statistics">
+    <div class="grid grid-cols-2 md:grid-cols-4">
+      <div class="stat-item">
+        <div class="stat-num">19+</div>
+        <div class="stat-label">Projects Completed</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">12</div>
+        <div class="stat-label">Years in Houston</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">$0</div>
+        <div class="stat-label">Cost Overruns</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">100%</div>
+        <div class="stat-label">Client Retention</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="below-fold py-14 px-8 border-t border-offwhite/5 text-center">
+    <p class="font-serif text-4xl tracking-widest font-light mb-1" style="color:#B8960C;">MCDesign</p>
+    <p class="text-xs tracking-[0.3em] uppercase text-offwhite/25 mb-8">Houston, Texas · Design-Build &amp; Construction Management</p>
+    <p class="text-offwhite/20 text-xs tracking-widest uppercase">© 2025 MCDesign. All Rights Reserved.</p>
+  </footer>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!--  SCRIPTS                                                    -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <script>
+    /* ═══════════════════════════════════════════════════════════
+       1. CANVAS SETUP
+    ═══════════════════════════════════════════════════════════ */
+    const canvas = document.getElementById('bg-canvas');
+    const ctx    = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+      drawFrame(Math.round(currentFrame));
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    /* ═══════════════════════════════════════════════════════════
+       2. IMAGE SEQUENCE
+       ─────────────────────────────────────────────────────────
+       TO SWAP IN REAL FRAMES:
+       Replace the placeholder block below with:
+
+         const TOTAL_FRAMES = 200; // or however many you have
+         const frames = Array.from({ length: TOTAL_FRAMES }, (_, i) => {
+           const img = new Image();
+           img.src = `./frames/frame_${String(i + 1).padStart(4, '0')}.jpg`;
+           return img;
+         });
+
+       Then place frame_0001.jpg → frame_0200.jpg in ./frames/
+    ═══════════════════════════════════════════════════════════ */
+    const TOTAL_FRAMES = 200;
+    const frames = [];
+    let currentFrame = 0;
+
+    /* ── Placeholder: procedural construction timelapse ─────────
+       Renders a convincing construction site progression:
+       Phase 1 (0–25%):   bare earth / site prep — warm ochre tones
+       Phase 2 (25–55%):  foundation / slab — concrete grey emerges
+       Phase 3 (55–80%):  steel framing — vertical lines rise
+       Phase 4 (80–100%): envelope / glazing — building completed
+    ─────────────────────────────────────────────────────────── */
+    (function buildPlaceholders() {
+      const W = 1920, H = 1080;
+      const off  = document.createElement('canvas');
+      off.width  = W; off.height = H;
+      const oc   = off.getContext('2d');
+
+      for (let i = 0; i < TOTAL_FRAMES; i++) {
+        const t   = i / (TOTAL_FRAMES - 1); // 0 → 1
+        const img = new Image();
+
+        // ── Sky gradient (shifts from dawn haze → clear blue → dusk gold) ──
+        const skyTop    = lerpColor([30,30,40], [60,80,110], Math.min(t * 2, 1));
+        const skyBot    = lerpColor([80,60,40], [140,160,180], Math.min(t * 2, 1));
+        const skyGrd    = oc.createLinearGradient(0,0,0,H*0.55);
+        skyGrd.addColorStop(0, rgb(skyTop));
+        skyGrd.addColorStop(1, rgb(skyBot));
+        oc.fillStyle = skyGrd;
+        oc.fillRect(0, 0, W, H);
+
+        // ── Ground ──
+        const groundY   = H * 0.55;
+        const gndColor  = lerpColor([80,65,45], [100,90,80], t);
+        oc.fillStyle = rgb(gndColor);
+        oc.fillRect(0, groundY, W, H - groundY);
+
+        // ── Ambient dirt / rubble texture at ground level ──
+        for (let d = 0; d < 200; d++) {
+          const dx = (d * 139.3) % W;
+          const dy = groundY + (d * 97.7)  % (H - groundY);
+          oc.fillStyle = `rgba(60,50,35,${0.3 + Math.random() * 0.2})`;
+          oc.fillRect(dx, dy, 2 + Math.random() * 4, 1 + Math.random() * 2);
+        }
+
+        // Phase 2+: concrete slab emerges (0.25 → 0.55)
+        const slabProgress = smoothstep(0.2, 0.5, t);
+        if (slabProgress > 0) {
+          const slabW = W * 0.6 * slabProgress;
+          const slabX = (W - slabW) / 2;
+          const slabH = H * 0.03;
+          oc.fillStyle = `rgba(160,155,148,${slabProgress * 0.9})`;
+          oc.fillRect(slabX, groundY - slabH, slabW, slabH);
+          // slab edge shadow
+          oc.fillStyle = `rgba(30,30,30,${slabProgress * 0.4})`;
+          oc.fillRect(slabX, groundY - slabH, slabW, 3);
+        }
+
+        // Phase 3: steel columns rise (0.45 → 0.75)
+        const steelProgress = smoothstep(0.42, 0.72, t);
+        if (steelProgress > 0) {
+          const numCols  = 7;
+          const buildW   = W * 0.55;
+          const buildX   = (W - buildW) / 2;
+          const maxH     = H * 0.38;
+          const colW     = 8;
+
+          for (let c = 0; c < numCols; c++) {
+            const cx     = buildX + (c / (numCols - 1)) * buildW;
+            const colH   = maxH * steelProgress * (0.8 + (c % 3) * 0.1);
+            // individual column rise with slight stagger
+            const stagger = smoothstep(0.42 + c * 0.012, 0.72 + c * 0.01, t);
+            const ch       = maxH * stagger * 0.9;
+
+            oc.fillStyle = `rgba(80,90,100,${0.85 * steelProgress})`;
+            oc.fillRect(cx - colW/2, groundY - ch, colW, ch);
+
+            // horizontal beams every 15% of column height
+            for (let b = 1; b <= 5; b++) {
+              const by = groundY - ch * (b / 6);
+              if (by > groundY - ch + 10) {
+                oc.fillStyle = `rgba(90,100,110,${0.7 * steelProgress})`;
+                oc.fillRect(buildX, by - 3, buildW, 4);
+              }
+            }
+          }
+        }
+
+        // Phase 4: envelope / glazing panels appear (0.72 → 1.0)
+        const envProgress = smoothstep(0.70, 0.95, t);
+        if (envProgress > 0) {
+          const buildW = W * 0.55;
+          const buildX = (W - buildW) / 2;
+          const buildH = H * 0.38 * envProgress;
+
+          // Facade panels
+          const panelW = buildW / 10;
+          const panelH = buildH / 8;
+          for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 10; col++) {
+              const alpha = smoothstep(0.70 + (row * 0.015), 0.98, t);
+              if (alpha <= 0) continue;
+              const px = buildX + col * panelW;
+              const py = groundY - buildH + row * panelH;
+              oc.fillStyle = `rgba(100,115,130,${0.6 * alpha})`;
+              oc.fillRect(px + 1, py + 1, panelW - 2, panelH - 2);
+              // glazing reflection
+              oc.fillStyle = `rgba(160,200,230,${0.25 * alpha})`;
+              oc.fillRect(px + 2, py + 2, panelW * 0.4, panelH * 0.3);
+              // panel gap
+              oc.fillStyle = `rgba(28,28,30,${alpha})`;
+              oc.fillRect(px, py, 1, panelH);
+              oc.fillRect(px, py, panelW, 1);
+            }
+          }
+        }
+
+        // ── Dust haze near horizon ──
+        const hazeGrd = oc.createLinearGradient(0, groundY - 40, 0, groundY + 60);
+        hazeGrd.addColorStop(0, 'rgba(200,180,140,0)');
+        hazeGrd.addColorStop(0.5, `rgba(200,180,140,${0.08 + t * 0.04})`);
+        hazeGrd.addColorStop(1, 'rgba(200,180,140,0)');
+        oc.fillStyle = hazeGrd;
+        oc.fillRect(0, groundY - 40, W, 100);
+
+        // ── Distant city silhouette ──
+        drawSkyline(oc, W, H, groundY, t);
+
+        // ── Encode frame ──
+        img.src = off.toDataURL('image/jpeg', 0.7);
+        frames.push(img);
+      }
+
+      // Kick-start first frame after generation
+      frames[0].onload = () => drawFrame(0);
+      if (frames[0].complete) drawFrame(0);
+    })();
+
+    /* ── Helpers ───────────────────────────────────────────── */
+    function lerpColor(a, b, t) {
+      return [
+        a[0] + (b[0] - a[0]) * t,
+        a[1] + (b[1] - a[1]) * t,
+        a[2] + (b[2] - a[2]) * t,
+      ];
+    }
+    function rgb([r,g,b]) { return `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`; }
+    function smoothstep(edge0, edge1, x) {
+      const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+      return t * t * (3 - 2 * t);
+    }
+    function drawSkyline(oc, W, H, groundY, t) {
+      // Distant low-rise buildings — opacity increases as construction advances
+      const alpha = 0.12 + t * 0.18;
+      const bldgs = [
+        { x: 0.05, w: 0.06, h: 0.10 },
+        { x: 0.12, w: 0.04, h: 0.14 },
+        { x: 0.17, w: 0.05, h: 0.08 },
+        { x: 0.72, w: 0.06, h: 0.12 },
+        { x: 0.80, w: 0.07, h: 0.16 },
+        { x: 0.88, w: 0.05, h: 0.10 },
+        { x: 0.93, w: 0.04, h: 0.07 },
+      ];
+      bldgs.forEach(b => {
+        oc.fillStyle = `rgba(40,45,55,${alpha})`;
+        oc.fillRect(b.x * W, groundY - b.h * H, b.w * W, b.h * H);
+      });
+    }
+
+    /* ── Draw function ────────────────────────────────────── */
+    function drawFrame(index) {
+      const i   = Math.max(0, Math.min(Math.round(index), TOTAL_FRAMES - 1));
+      const img = frames[i];
+      if (!img || !img.complete) return;
+
+      const cW = canvas.width, cH = canvas.height;
+      const iW = img.naturalWidth  || 1920;
+      const iH = img.naturalHeight || 1080;
+      const s  = Math.max(cW / iW, cH / iH);
+
+      ctx.clearRect(0, 0, cW, cH);
+      ctx.drawImage(img, (cW - iW*s)/2, (cH - iH*s)/2, iW*s, iH*s);
+
+      // Update frame counter
+      document.getElementById('frame-now').textContent =
+        String(i + 1).padStart(3, '0');
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       3. GSAP SCROLL ENGINE
+    ═══════════════════════════════════════════════════════════ */
+    gsap.registerPlugin(ScrollTrigger);
+
+    const state = { frame: 0 };
+
+    // ── Master frame scrub ──────────────────────────────────────
+    gsap.to(state, {
+      frame: TOTAL_FRAMES - 1,
+      ease:  'none',
+      scrollTrigger: {
+        trigger: '#canvas-section',
+        start:   'top top',
+        end:     'bottom bottom',
+        scrub:   1.2,
+        onUpdate(self) {
+          currentFrame = state.frame;
+          drawFrame(state.frame);
+
+          // Progress bar
+          document.getElementById('progress-bar').style.width =
+            (self.progress * 100) + '%';
+
+          // Phase badge label
+          const p = self.progress;
+          let phase = 'Site Preparation';
+          if (p > 0.20) phase = 'Foundation & Slab';
+          if (p > 0.45) phase = 'Structural Framing';
+          if (p > 0.70) phase = 'Building Envelope';
+          if (p > 0.88) phase = 'Completion';
+          document.getElementById('phase-label').textContent = phase;
+        },
+        onEnter()     { showBadge(true);  },
+        onLeaveBack() { showBadge(false); },
+        onLeave()     { showBadge(false); },
+      }
+    });
+
+    function showBadge(show) {
+      gsap.to('#phase-badge',  { opacity: show ? 1 : 0, duration: 0.6, ease: 'power2.out' });
+      gsap.to('#frame-counter',{ opacity: show ? 1 : 0, duration: 0.6, ease: 'power2.out' });
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       4. OVERLAY PANELS
+    ═══════════════════════════════════════════════════════════ */
+    const totalScroll = 5 * window.innerHeight; // 600vh − 1vh = 5vh of travel
+
+    const phases = [
+      {
+        id:    'overlay-1',
+        enter: [0,          totalScroll * 0.05],
+        leave: [totalScroll * 0.18, totalScroll * 0.25],
+        iy: 40,
+      },
+      {
+        id:    'overlay-2',
+        enter: [totalScroll * 0.18, totalScroll * 0.28],
+        leave: [totalScroll * 0.42, totalScroll * 0.50],
+        iy: 30,
+      },
+      {
+        id:    'overlay-3',
+        enter: [totalScroll * 0.44, totalScroll * 0.54],
+        leave: [totalScroll * 0.66, totalScroll * 0.74],
+        iy: -30,
+      },
+      {
+        id:    'overlay-4',
+        enter: [totalScroll * 0.68, totalScroll * 0.78],
+        leave: [totalScroll * 0.86, totalScroll * 0.93],
+        iy: 30,
+      },
+      {
+        id:    'overlay-5',
+        enter: [totalScroll * 0.88, totalScroll * 0.96],
+        leave: [totalScroll * 1.05, totalScroll * 1.12],
+        iy: 40,
+      },
+    ];
+
+    phases.forEach(({ id, enter, leave, iy = 30 }) => {
+      const el = document.getElementById(id);
+      gsap.set(el, { opacity: 0, y: iy });
+
+      // Fade in
+      gsap.to(el, {
+        opacity: 1, y: 0,
+        scrollTrigger: {
+          trigger: '#canvas-section',
+          start:   `top+=${enter[0]}px top`,
+          end:     `top+=${enter[1]}px top`,
+          scrub:   1,
+        }
+      });
+
+      // Fade out
+      gsap.to(el, {
+        opacity: 0, y: iy * -1,
+        scrollTrigger: {
+          trigger: '#canvas-section',
+          start:   `top+=${leave[0]}px top`,
+          end:     `top+=${leave[1]}px top`,
+          scrub:   1,
+        }
+      });
+    });
+
+    /* ═══════════════════════════════════════════════════════════
+       5. BELOW-FOLD STATS — count-up on enter
+    ═══════════════════════════════════════════════════════════ */
+    ScrollTrigger.create({
+      trigger: '.below-fold',
+      start:   'top 80%',
+      once:    true,
+      onEnter() {
+        document.querySelectorAll('.stat-num').forEach(el => {
+          gsap.fromTo(el, { opacity: 0, y: 20 }, {
+            opacity: 1, y: 0, duration: 0.8, ease: 'power3.out',
+            delay: 0.1,
+          });
+        });
+      }
+    });
+  </script>
+</body>
+</html>

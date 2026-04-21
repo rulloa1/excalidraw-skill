@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flava Depot · Tha Houston Chron</title>
+  <meta name="description" content="Flava Depot — Houston's premier smoke shop. Premium wraps, exotic flavas, and Houston's finest vibe. Pull up to the shop." />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            heading: ['Bebas Neue', 'cursive'],
+            body: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            black:   '#080808',
+            purple:  '#9B5DE5',
+            gold:    '#D4AF37',
+            white:   '#F5F5F5',
+          },
+        }
+      }
+    }
+  </script>
+
+  <!-- GSAP + ScrollTrigger CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+  <style>
+    /* ─── Base Reset ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: auto; }
+    body {
+      background-color: #080808;
+      color: #F5F5F5;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* ─── Fixed Canvas (background layer) ─────────────────────── */
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+    }
+
+    /* ─── Dark vignette scrim over canvas ─────────────────────── */
+    #canvas-scrim {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      background: radial-gradient(ellipse at center,
+        transparent 30%,
+        rgba(8, 8, 8, 0.55) 70%,
+        rgba(8, 8, 8, 0.90) 100%);
+      pointer-events: none;
+    }
+
+    /* ─── Scroll container that drives the pinned section ─────── */
+    #canvas-section {
+      position: relative;
+      z-index: 2;
+      /* height set dynamically via JS: 400vh */
+    }
+
+    /* ─── Sticky viewport-filling wrapper ─────────────────────── */
+    #canvas-sticky {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* ─── Text Overlay Panels ─────────────────────────────────── */
+    .overlay-panel {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 10;
+      /* glassmorphism */
+      background: rgba(8, 8, 8, 0.35);
+      backdrop-filter: blur(18px) saturate(160%);
+      -webkit-backdrop-filter: blur(18px) saturate(160%);
+      border: 1px solid rgba(155, 93, 229, 0.25);
+      border-radius: 1.25rem;
+      padding: 2rem 2.5rem;
+      box-shadow:
+        0 0 40px rgba(155, 93, 229, 0.18),
+        0 0 80px rgba(155, 93, 229, 0.08),
+        inset 0 1px 0 rgba(255,255,255,0.06);
+      max-width: min(640px, 90vw);
+      transition: none; /* GSAP handles all transitions */
+    }
+
+    /* ─── Section 1 – Center Hero ──────────────────────────────── */
+    #overlay-1 {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    /* ─── Section 2 – Bottom Left ─────────────────────────────── */
+    #overlay-2 {
+      bottom: 10%;
+      left: 5%;
+      text-align: left;
+    }
+
+    /* ─── Section 3 – Bottom Right ────────────────────────────── */
+    #overlay-3 {
+      bottom: 10%;
+      right: 5%;
+      text-align: right;
+    }
+
+    /* ─── Section 4 – Center CTA ──────────────────────────────── */
+    #overlay-4 {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    /* ─── Brand Name Sizing ────────────────────────────────────── */
+    .brand-name {
+      font-family: 'Bebas Neue', cursive;
+      font-size: clamp(3rem, 10vw, 7rem);
+      line-height: 0.92;
+      letter-spacing: 0.04em;
+      color: #F5F5F5;
+      text-shadow:
+        0 0 30px rgba(155, 93, 229, 0.6),
+        0 0 80px rgba(155, 93, 229, 0.25);
+    }
+    .brand-sub {
+      font-family: 'Bebas Neue', cursive;
+      font-size: clamp(1.25rem, 4vw, 2.5rem);
+      letter-spacing: 0.25em;
+      color: #D4AF37;
+      margin-top: 0.4rem;
+      text-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+    }
+    .panel-tagline {
+      font-family: 'Bebas Neue', cursive;
+      font-size: clamp(1.4rem, 3.5vw, 2.4rem);
+      letter-spacing: 0.05em;
+      color: #F5F5F5;
+      line-height: 1.1;
+    }
+    .panel-sub {
+      font-family: 'Inter', sans-serif;
+      font-weight: 300;
+      font-size: clamp(0.75rem, 1.5vw, 0.95rem);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(245, 245, 245, 0.55);
+      margin-top: 0.6rem;
+    }
+    .gold-line {
+      width: 3rem;
+      height: 2px;
+      background: linear-gradient(90deg, #D4AF37, transparent);
+      margin: 0.8rem 0;
+    }
+    .gold-line.right { margin-left: auto; background: linear-gradient(270deg, #D4AF37, transparent); }
+    .gold-line.center { margin: 0.8rem auto; background: linear-gradient(90deg, transparent, #D4AF37, transparent); width: 6rem; }
+
+    /* ─── CTA Button ───────────────────────────────────────────── */
+    #cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-top: 1.4rem;
+      padding: 0.8rem 2rem;
+      background: linear-gradient(135deg, #9B5DE5, #6A0DAD);
+      border: 1px solid rgba(155, 93, 229, 0.4);
+      border-radius: 0.5rem;
+      color: #F5F5F5;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 0.85rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-decoration: none;
+      cursor: pointer;
+      pointer-events: all;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      box-shadow: 0 0 24px rgba(155, 93, 229, 0.4);
+    }
+    #cta-btn:hover {
+      transform: translateY(-2px) scale(1.03);
+      box-shadow: 0 0 40px rgba(155, 93, 229, 0.7), 0 8px 24px rgba(0,0,0,0.4);
+      background: linear-gradient(135deg, #b06ef0, #7B2CD4);
+    }
+    #cta-btn svg {
+      width: 1rem;
+      height: 1rem;
+      flex-shrink: 0;
+    }
+
+    /* ─── Smoke particle overlay ───────────────────────────────── */
+    #smoke-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .smoke-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0;
+      animation: smokeFloat var(--dur, 12s) ease-in-out infinite;
+    }
+    @keyframes smokeFloat {
+      0%   { transform: translate(0, 0)    scale(1);    opacity: 0; }
+      15%  { opacity: var(--max-op, 0.12); }
+      85%  { opacity: var(--max-op, 0.12); }
+      100% { transform: translate(var(--dx, 40px), var(--dy, -120px)) scale(1.4); opacity: 0; }
+    }
+
+    /* ─── Noise / grain texture ────────────────────────────────── */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 4;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.03;
+    }
+
+    /* ─── Below-fold sections ──────────────────────────────────── */
+    .below-fold {
+      position: relative;
+      z-index: 5;
+      background: #080808;
+    }
+
+    /* ─── Scrollbar ────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #080808; }
+    ::-webkit-scrollbar-thumb { background: #9B5DE5; border-radius: 2px; }
+
+    /* ─── Progress Bar ─────────────────────────────────────────── */
+    #progress-bar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 3px;
+      width: 0%;
+      background: linear-gradient(90deg, #9B5DE5, #D4AF37);
+      z-index: 1000;
+      transition: width 0.1s linear;
+      box-shadow: 0 0 10px rgba(155,93,229,0.6);
+    }
+
+    /* ─── Logo / Nav ───────────────────────────────────────────── */
+    #site-nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 999;
+      padding: 1.2rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(to bottom, rgba(8,8,8,0.85) 0%, transparent 100%);
+      pointer-events: none;
+    }
+    #nav-logo {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.4rem;
+      letter-spacing: 0.2em;
+      color: #F5F5F5;
+      text-shadow: 0 0 20px rgba(155,93,229,0.5);
+    }
+    #nav-logo span { color: #D4AF37; }
+  </style>
+</head>
+
+<body class="bg-black text-white font-body">
+
+  <!-- Progress Bar -->
+  <div id="progress-bar"></div>
+
+  <!-- Navigation Logo -->
+  <nav id="site-nav" aria-label="Site navigation">
+    <div id="nav-logo">FLAVA <span>DEPOT</span></div>
+  </nav>
+
+  <!-- Background Canvas (fixed) -->
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+  <!-- Scrim over canvas -->
+  <div id="canvas-scrim" aria-hidden="true"></div>
+
+  <!-- Smoke particle layer -->
+  <div id="smoke-layer" aria-hidden="true">
+    <div class="smoke-orb" style="width:600px;height:600px;background:radial-gradient(circle,#9B5DE5,transparent);left:-10%;top:20%;--dur:14s;--dy:-200px;--dx:60px;--max-op:0.10;"></div>
+    <div class="smoke-orb" style="width:400px;height:400px;background:radial-gradient(circle,#6A0DAD,transparent);right:5%;top:60%;--dur:18s;--dy:-160px;--dx:-40px;--max-op:0.09;animation-delay:-6s;"></div>
+    <div class="smoke-orb" style="width:500px;height:500px;background:radial-gradient(circle,#D4AF37,transparent);left:40%;bottom:10%;--dur:22s;--dy:-250px;--dx:20px;--max-op:0.06;animation-delay:-11s;"></div>
+    <div class="smoke-orb" style="width:300px;height:300px;background:radial-gradient(circle,#9B5DE5,transparent);right:25%;top:10%;--dur:16s;--dy:-180px;--dx:-50px;--max-op:0.08;animation-delay:-3s;"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!--  CANVAS SECTION  (400vh pinned driver)                     -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="canvas-section" aria-label="Flava Depot cinematic sequence" style="height:500vh;">
+    <div id="canvas-sticky">
+
+      <!-- ── Overlay 1 · Hero ──────────────────────────────── -->
+      <div id="overlay-1" class="overlay-panel" aria-label="Hero tagline">
+        <p class="panel-sub" style="color: rgba(212,175,55,0.7); margin-bottom:0.5rem;">Est. Houston, TX</p>
+        <h1 class="brand-name">FLAVA<br/>DEPOT</h1>
+        <div class="gold-line center"></div>
+        <p class="brand-sub">THA HOUSTON CHRON</p>
+      </div>
+
+      <!-- ── Overlay 2 · Premium Wraps ─────────────────────── -->
+      <div id="overlay-2" class="overlay-panel" aria-label="Products tagline">
+        <p class="panel-sub">What We Move</p>
+        <div class="gold-line"></div>
+        <h2 class="panel-tagline">Premium Wraps.<br/>Exotic Flavas.<br/>Houston's Finest.</h2>
+      </div>
+
+      <!-- ── Overlay 3 · Vibe ───────────────────────────────── -->
+      <div id="overlay-3" class="overlay-panel" aria-label="Vibe tagline">
+        <p class="panel-sub" style="text-align:right;">The Culture</p>
+        <div class="gold-line right"></div>
+        <h2 class="panel-tagline">The Vibe Is Real.<br/>Find Your Flava.</h2>
+      </div>
+
+      <!-- ── Overlay 4 · CTA ────────────────────────────────── -->
+      <div id="overlay-4" class="overlay-panel" aria-label="Call to action">
+        <p class="panel-sub" style="letter-spacing:0.3em;">You Already Know</p>
+        <div class="gold-line center"></div>
+        <h2 class="panel-tagline" style="font-size:clamp(1.8rem,4vw,3rem);">Pull Up to<br/>the Shop.</h2>
+        <a
+          id="cta-btn"
+          href="https://maps.google.com/?q=Flava+Depot+Houston+TX"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Get directions to Flava Depot"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M11.54 22.351l.07.04.028.016a.76.76 0 00.723 0l.028-.015.071-.041a16.975 16.975 0 001.144-.742 19.58 19.58 0 002.683-2.282c1.944-2.083 3.818-5.402 3.818-9.327 0-4.56-3.68-8.25-8.218-8.25C7.71 1.75 4 5.44 4 10c0 3.925 1.874 7.244 3.818 9.327a19.58 19.58 0 002.683 2.282 16.975 16.975 0 001.144.742zM12 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+          </svg>
+          GET DIRECTIONS
+        </a>
+      </div>
+
+    </div><!-- /canvas-sticky -->
+  </section><!-- /canvas-section -->
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!--  BELOW-FOLD FOOTER                                         -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <footer class="below-fold py-16 px-8 border-t border-purple/20">
+    <div class="max-w-4xl mx-auto text-center">
+      <p class="font-heading text-5xl tracking-widest mb-2" style="color:#9B5DE5;">FLAVA DEPOT</p>
+      <p class="text-xs tracking-[0.3em] uppercase text-white/30 mb-8">Tha Houston Chron · Houston, TX</p>
+      <p class="text-white/20 text-xs tracking-widest uppercase">© 2025 Flava Depot. All Rights Reserved.</p>
+    </div>
+  </footer>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!--  SCRIPTS                                                    -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <script>
+    /* ─────────────────────────────────────────────────────────
+       1. CANVAS SETUP
+    ───────────────────────────────────────────────────────── */
+    const canvas = document.getElementById('bg-canvas');
+    const ctx    = canvas.getContext('2d');
+
+    // Resize canvas to fill viewport
+    function resizeCanvas() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    /* ─────────────────────────────────────────────────────────
+       2. IMAGE SEQUENCE
+       Replace these placeholder URLs with your real frames:
+         frames[i] = `./frames/frame_${String(i+1).padStart(4,'0')}.jpg`
+       We pre-load them all for butter-smooth playback.
+    ───────────────────────────────────────────────────────── */
+    const TOTAL_FRAMES = 200;
+
+    // Build placeholder URLs – a dark smoke-like gradient rendered to a tiny
+    // offscreen canvas so the mechanic works immediately without real frames.
+    // When you drop in real JPGs, replace this entire block with a simple
+    // flat array of file paths and call loadImages().
+    const frames = [];
+
+    (function buildPlaceholders() {
+      const off = document.createElement('canvas');
+      off.width = 1920; off.height = 1080;
+      const octx = off.getContext('2d');
+
+      for (let i = 0; i < TOTAL_FRAMES; i++) {
+        const t = i / (TOTAL_FRAMES - 1); // 0 → 1
+
+        // Animated gradient: dark purple smoke rising from bottom
+        const grd = octx.createRadialGradient(960, 1080, 0, 960, 400, 900);
+        const purpleAlpha = 0.05 + t * 0.35;
+        const goldAlpha   = 0.02 + t * 0.15;
+
+        grd.addColorStop(0,   `rgba(155, 93, 229, ${purpleAlpha})`);
+        grd.addColorStop(0.4, `rgba(106, 13, 173, ${purpleAlpha * 0.6})`);
+        grd.addColorStop(0.7, `rgba(212,175,55,  ${goldAlpha})`);
+        grd.addColorStop(1,   'rgba(8, 8, 8, 1)');
+
+        octx.clearRect(0, 0, 1920, 1080);
+        octx.fillStyle = '#080808';
+        octx.fillRect(0, 0, 1920, 1080);
+        octx.fillStyle = grd;
+        octx.fillRect(0, 0, 1920, 1080);
+
+        // subtle particle dots
+        for (let p = 0; p < 80; p++) {
+          const px = Math.sin((i + p * 137.5) * 0.08) * 800 + 960;
+          const py = Math.cos((i + p * 97.3)  * 0.07) * 400 + (1080 - t * 700);
+          const pr = 0.5 + Math.random() * 2;
+          octx.beginPath();
+          octx.arc(px, py, pr, 0, Math.PI * 2);
+          octx.fillStyle = p % 3 === 0
+            ? `rgba(212,175,55,${0.1 + t * 0.3})`
+            : `rgba(155,93,229,${0.08 + t * 0.25})`;
+          octx.fill();
+        }
+
+        // Encode frame to image
+        const img = new Image();
+        img.src = off.toDataURL('image/jpeg', 0.6);
+        frames.push(img);
+      }
+    })();
+
+    // Draw the current frame
+    function drawFrame(index) {
+      const img = frames[Math.max(0, Math.min(index, TOTAL_FRAMES - 1))];
+      if (!img || !img.complete) return;
+
+      const cW = canvas.width;
+      const cH = canvas.height;
+      const iW = img.naturalWidth  || 1920;
+      const iH = img.naturalHeight || 1080;
+      const scale = Math.max(cW / iW, cH / iH);
+      const dW = iW * scale;
+      const dH = iH * scale;
+      const dX = (cW - dW) / 2;
+      const dY = (cH - dH) / 2;
+
+      ctx.clearRect(0, 0, cW, cH);
+      ctx.drawImage(img, dX, dY, dW, dH);
+    }
+
+    // Draw first frame immediately
+    frames[0].onload = () => drawFrame(0);
+    if (frames[0].complete) drawFrame(0);
+
+    /* ─────────────────────────────────────────────────────────
+       3. GSAP SCROLL TRIGGER
+    ───────────────────────────────────────────────────────── */
+    gsap.registerPlugin(ScrollTrigger);
+
+    // -- Current frame tracker (reactive object for GSAP) --
+    const state = { frame: 0 };
+
+    // -- Master scroll timeline --
+    const masterTL = gsap.timeline({
+      scrollTrigger: {
+        trigger:  '#canvas-section',
+        start:    'top top',
+        end:      'bottom bottom',
+        scrub:    1,
+        onUpdate: (self) => {
+          // Update progress bar
+          document.getElementById('progress-bar').style.width =
+            (self.progress * 100) + '%';
+        },
+      }
+    });
+
+    // Animate frame counter 0 → TOTAL_FRAMES-1
+    masterTL.to(state, {
+      frame: TOTAL_FRAMES - 1,
+      ease:  'none',
+      duration: 1,
+      onUpdate: () => drawFrame(Math.round(state.frame)),
+    });
+
+    /* ─────────────────────────────────────────────────────────
+       4. OVERLAY ANIMATIONS
+       Checkpoints: 0%, 33%, 66%, 90% of canvas-section scroll
+    ───────────────────────────────────────────────────────── */
+
+    const section  = document.getElementById('canvas-section');
+    const sectionH = '500vh'; // must match inline style
+
+    // Helper: create a fade-in/out ScrollTrigger for each overlay
+    function makeOverlay({ id, enterStart, enterEnd, leaveStart, leaveEnd, fromVars = {}, toVars = {} }) {
+      const el = document.getElementById(id);
+
+      // Fade IN
+      gsap.fromTo(el,
+        { opacity: 0, y: fromVars.y ?? 30, scale: fromVars.scale ?? 0.96 },
+        {
+          opacity: 1, y: 0, scale: 1,
+          duration: 1, ease: 'power2.out',
+          scrollTrigger: {
+            trigger: '#canvas-section',
+            start:   `top+=${enterStart} top`,
+            end:     `top+=${enterEnd}   top`,
+            scrub:   1,
+          }
+        }
+      );
+
+      // Fade OUT
+      gsap.fromTo(el,
+        { opacity: 1, y: 0, scale: 1 },
+        {
+          opacity: 0, y: toVars.y ?? -30, scale: toVars.scale ?? 0.96,
+          duration: 1, ease: 'power2.in',
+          scrollTrigger: {
+            trigger: '#canvas-section',
+            start:   `top+=${leaveStart} top`,
+            end:     `top+=${leaveEnd}   top`,
+            scrub:   1,
+          }
+        }
+      );
+    }
+
+    // Section heights in px fractions of 500vh:
+    // 500vh total → checkpoints at 0%, 33%, 66%, 90%
+    // We use window.innerHeight * multiplier for dynamic values
+    const vh = () => window.innerHeight;
+
+    // Using absolute pixel offsets from section top:
+    // 0%  = 0px
+    // 33% = 0.33 * 400vh (scroll range = 4*vh of pinned content)
+    // etc.
+    // scroll range = sectionHeight - viewportHeight = 4*vh => 4*100 = 400*vh
+
+    ScrollTrigger.addEventListener('refresh', buildOverlayTimelines);
+    buildOverlayTimelines();
+
+    function buildOverlayTimelines() {
+      // Clear old triggers to avoid duplicates on resize
+      ScrollTrigger.getAll()
+        .filter(t => t.vars && t.vars._isOverlay)
+        .forEach(t => t.kill());
+
+      const totalScroll = 4 * window.innerHeight; // 500vh section − 1vh viewport = 4vh of scrub
+
+      const cp = {
+        s1Enter: 0,
+        s1Leave: totalScroll * 0.28,
+        s2Enter: totalScroll * 0.25,
+        s2Leave: totalScroll * 0.55,
+        s3Enter: totalScroll * 0.52,
+        s3Leave: totalScroll * 0.82,
+        s4Enter: totalScroll * 0.80,
+        s4Leave: totalScroll * 1.05,
+      };
+
+      const overlayDefs = [
+        { id: 'overlay-1', enterStart: cp.s1Enter, enterEnd: cp.s1Enter + 80,  leaveStart: cp.s1Leave, leaveEnd: cp.s1Leave + 80 },
+        { id: 'overlay-2', enterStart: cp.s2Enter, enterEnd: cp.s2Enter + 120, leaveStart: cp.s2Leave, leaveEnd: cp.s2Leave + 120 },
+        { id: 'overlay-3', enterStart: cp.s3Enter, enterEnd: cp.s3Enter + 120, leaveStart: cp.s3Leave, leaveEnd: cp.s3Leave + 120 },
+        { id: 'overlay-4', enterStart: cp.s4Enter, enterEnd: cp.s4Enter + 120, leaveStart: cp.s4Leave, leaveEnd: cp.s4Leave + 120, fromVars: { y: 40 }, toVars: { y: -40 } },
+      ];
+
+      overlayDefs.forEach(def => {
+        const el = document.getElementById(def.id);
+        // Reset
+        gsap.set(el, { opacity: 0, y: def.fromVars?.y ?? 30, scale: 0.96 });
+
+        // Fade IN
+        gsap.to(el, {
+          opacity: 1, y: 0, scale: 1, ease: 'power2.out',
+          scrollTrigger: {
+            _isOverlay: true,
+            trigger: '#canvas-section',
+            start:   `top+=${def.enterStart}px top`,
+            end:     `top+=${def.enterEnd}px   top`,
+            scrub:   1,
+          }
+        });
+
+        // Fade OUT (only if within scroll range)
+        if (def.leaveStart < totalScroll + window.innerHeight) {
+          gsap.to(el, {
+            opacity: 0, y: def.toVars?.y ?? -30, scale: 0.96, ease: 'power2.in',
+            scrollTrigger: {
+              _isOverlay: true,
+              trigger: '#canvas-section',
+              start:   `top+=${def.leaveStart}px top`,
+              end:     `top+=${def.leaveEnd}px   top`,
+              scrub:   1,
+            }
+          });
+        }
+      });
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       5. NAV subtle color shift on scroll
+    ───────────────────────────────────────────────────────── */
+    ScrollTrigger.create({
+      start: 100,
+      onEnter: () => {
+        document.getElementById('site-nav').style.background =
+          'linear-gradient(to bottom, rgba(8,8,8,0.95) 0%, rgba(8,8,8,0.0) 100%)';
+      },
+      onLeaveBack: () => {
+        document.getElementById('site-nav').style.background =
+          'linear-gradient(to bottom, rgba(8,8,8,0.85) 0%, transparent 100%)';
+      }
+    });
+
+  </script>
+</body>
+</html>
